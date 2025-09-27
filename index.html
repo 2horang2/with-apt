@@ -390,23 +390,19 @@
   <!-- 상단 인사이트 카드 -->
   <div id="insights" class="grid" style="margin:16px 0;">
     <div class="card section">
-      <div class="hint">전역 · 아파트+면적 그룹</div>
       <div style="font-weight:700;margin:6px 0 4px">거래량 Top 3</div>
       <div id="cardVol" style="font-size:14px">-</div>
     </div>
     <div class="card section">
-      <div class="hint">전역 · 아파트+면적 그룹</div>
       <div style="font-weight:700;margin:6px 0 4px">최고가 Top 3</div>
       <div id="cardHigh" style="font-size:14px">-</div>
     </div>
     <div class="card section">
-      <div class="hint">2015~현재 · 월평균 최저→최고</div>
-      <div style="font-weight:700;margin:6px 0 4px">증가율 Top 3</div>
+      <div style="font-weight:700;margin:6px 0 4px">2015년~현재 월평균가 기준 증가율 Top 3</div>
       <div id="cardG15" style="font-size:14px">-</div>
     </div>
     <div class="card section">
-      <div class="hint">2024~현재 · 월평균 최저→최고</div>
-      <div style="font-weight:700;margin:6px 0 4px">증가율 Top 3</div>
+      <div style="font-weight:700;margin:6px 0 4px">2024년~현재 월평균가 기준 증가율 Top 3</div>
       <div id="cardG24" style="font-size:14px">-</div>
     </div>
   </div>
@@ -628,11 +624,7 @@
     el.tbl.innerHTML = rows;
 
     if(byMonth.length){
-      var last = byMonth[byMonth.length-1];
-      el.kpiBox.style.display = 'flex';
-      el.kpiLast.textContent = fmt(last.avg/10000) + ' 만원';
-      el.kpiMom.textContent = (last.mom==null?'-': ((last.mom>0?'+':'')+last.mom.toFixed(1)+'%'));
-      el.kpiCnt.textContent = last.count.toLocaleString() + '건';
+      el.kpiBox.style.display = 'none';
     }else{
       el.kpiBox.style.display = 'none';
     }
