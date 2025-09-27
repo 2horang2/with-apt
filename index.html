@@ -272,7 +272,12 @@
   function norm(s){ return String(s).toLowerCase().replace(/\s+/g,''); }
   function qs(s,sc){ return (sc||document).querySelector(s); }
   function qsa(s,sc){ return Array.prototype.slice.call((sc||document).querySelectorAll(s)); }
-  function esc(s){ return String(s).replace(/[&<>"']/g,function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[m]; }); }
+  function esc(s){
+    return String(s).replace(/[&<>"']/g, function(m){
+      var map = {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"};
+      return map[m] || m;
+    });
+  }[m]; }); }
   function parseArea(v){ if(v==null) return NaN; var n=+String(v).replace(/[^0-9.]/g,''); return isFinite(n)? n : NaN; }
   function roundArea(a){ return Math.round(a*10)/10; }
   function sameArea(a,b){ if(!isFinite(a)||!isFinite(b)) return false; return roundArea(a)===roundArea(b); }
