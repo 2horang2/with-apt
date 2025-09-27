@@ -295,7 +295,37 @@
 
     /* sticky + 스크롤바 조합에서 생기는 1~2px 넘침 예방 */
     thead th{ box-shadow: 0 2px 0 rgba(0,0,0,.12), 1px 0 0 rgba(0,0,0,0); }
-
+    /* 1) 그리드 트랙이 콘텐츠에 끌려 늘어나지 않도록 */
+    .grid.cols-2{
+      grid-template-columns: minmax(0,1fr) minmax(0,1fr);
+    }
+    .grid.cols-3{
+      grid-template-columns: minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);
+    }
+    
+    /* 2) 그리드 자식들이 내부 콘텐츠 때문에 부모 폭을 밀지 않게 */
+    .grid > * {
+      min-width: 0;   /* 중요! */
+    }
+    
+    /* 3) 칩 래퍼는 가로 스크롤 대신 여러 줄로 랩핑 */
+    .chips{
+      display:flex;
+      flex-wrap: wrap;        /* nowrap -> wrap */
+      overflow-x: visible;    /* 내부 스크롤 제거 */
+      row-gap: 8px;           /* 줄바꿈 시 세로 간격 */
+    }
+    .chip{
+      white-space: nowrap;    /* 칩 내부 텍스트는 한 덩어리로 */
+      max-width: 100%;        /* 혹시나 너무 길면 부모 기준으로 제한 */
+    }
+    
+    /* 모바일에서 칩이 너무 꽉 차면 한 줄 스크롤로 바꾸고 싶다면 이렇게:
+    @media (max-width: 640px){
+      .chips{ flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    }
+    */
+    
     /* ========================
        RESPONSIVE
     =========================*/
