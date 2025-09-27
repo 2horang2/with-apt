@@ -79,7 +79,36 @@
     th:first-child,td:first-child{ text-align:left; position:sticky; left:0; background:var(--panel) }
     thead th{ position:sticky; top:0; background:#0f1626; z-index:1 }
 
-    canvas{ display:block !important; max-width:100% !important; height:auto !important; max-height:none !important }
+    :root{
+      /* ...기존 변수들... */
+      --chart-h: 300px; /* 데스크톱 기본 */
+    }
+    
+    /* 차트 래퍼가 높이를 소유 */
+    .chart-wrap{
+      position: relative;
+      width: 100%;
+      height: var(--chart-h);
+      max-height: var(--chart-h);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    
+    /* 캔버스는 래퍼를 꽉 채우기만 함 */
+    canvas{
+      display:block;
+      width:100% !important;
+      height:100% !important;
+    }
+    
+    /* 반응형 높이 */
+    @media (max-width:1024px){
+      :root{ --chart-h: 260px; }
+    }
+    @media (max-width:640px){
+      :root{ --chart-h: 220px; }
+    }
+
     #errMsg{ white-space:pre-line }
 
     /* ------- 인사이트 카드 그리드: 완전 반응형 ------- */
@@ -198,7 +227,10 @@
       </div>
     </div>
 
-    <canvas id="chart"></canvas>
+    <!-- 기존: <canvas id="chart"></canvas> -->
+    <div class="chart-wrap">
+      <canvas id="chart"></canvas>
+    </div>
 
     <div class="table-wrap" style="margin-top:10px">
       <table id="tbl">
