@@ -1,0 +1,73 @@
+name: Deploy
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch: {}   # 수동 실행도 가능하게
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout (옵션)
+        uses: actions/checkout@v4
+
+      - name: Add SSH private key (GitHub -> Server)
+        uses: webfactory/ssh-agent@v0.10.4
+        with:
+          ssh-private-key: |
+            ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add server to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -p "${{ secrets.SSH_PORT }}" "${{ secrets.SERVER_IP }}" >> ~/.ssh/known_hosts
+
+      - name: Remote deploy over SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SSH_USER }}
+          port: ${{ secrets.SSH_PORT }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script_stop: true
+          command_timeout: 30m
+          script: |
+            set -e
+            APP_DIR="${{ secrets.APP_DIR }}"
+            PM2_APP="${{ secrets.PM2_APP_NAME }}"
+
+            # 1) 리포 갱신 (서버가 Deploy Key로 GitHub에서 pull)
+            if [ ! -d "$APP_DIR/.git" ]; then
+              echo "❌ $APP_DIR 가 없어요. 서버에서 최초 클론을 먼저 해주세요."
+              exit 1
+            fi
+            cd "$APP_DIR"
+            git fetch --all --prune
+            git reset --hard origin/main
+
+            # 2) 설치/빌드
+            if [ -f package-lock.json ]; then
+              npm ci --omit=dev
+            else
+              npm install --production
+            fi
+            npm run build || true   # build 스크립트 없으면 무시
+
+            # 3) pm2 재시작 또는 시작
+            if pm2 describe "$PM2_APP" >/dev/null 2>&1; then
+              pm2 reload "$PM2_APP"
+            else
+              # 앱 시작 파일명에 맞춰 수정 (예: dist/server.js, app.js 등)
+              pm2 start app.js --name "$PM2_APP"
+            fi
+
+            pm2 save
