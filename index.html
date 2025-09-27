@@ -8,12 +8,15 @@
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
   <style>
+    /* Pretendard Variable (Korean UI font) */
+    @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css');
+
     :root{ --bg:#0b0f1a; --panel:#111827; --ink:#e5e7eb; --muted:#94a3b8; --line:#1f2937; --brand:#60a5fa; --chip:#1f2937 }
     *{ box-sizing:border-box }
-    body{ margin:0; background:linear-gradient(180deg,#0b0f1a 0%,#0f1628 100%); color:var(--ink); font-family:system-ui,-apple-system,Segoe UI,Roboto,Apple SD Gothic Neo,Noto Sans KR }
+    body{ margin:0; background:linear-gradient(180deg,#0b0f1a 0%,#0f1628 100%); color:var(--ink); font-family:'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', Segoe UI, Roboto, system-ui; }
     .wrap{ max-width:1200px; margin:24px auto; padding:0 16px 48px }
     header{ display:flex; gap:16px; align-items:center; flex-wrap:wrap; margin-bottom:16px }
-    h1{ font-size:20px; margin:0 }
+    h1{ font-size:20px; margin:0; letter-spacing:-.2px }
     .card{ background:var(--panel); border:1px solid var(--line); border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,.25) }
     .section{ padding:16px }
     .grid{ display:grid; gap:16px }
@@ -41,7 +44,7 @@
     .kpi .v{ font-size:18px }
     .hint{ color:var(--muted); font-size:12px }
     a.btn{ color:#081226; background:var(--brand); border-radius:10px; padding:8px 12px; text-decoration:none; display:inline-flex; align-items:center; gap:6px }
-    canvas{display:block !important;max-width:100% !important;height:400px !important;max-height:400px !important}
+    canvas{display:block !important;max-width:100% !important;height:300px !important;max-height:300px !important}
     #errMsg{ white-space:pre-line }
   </style>
 </head>
@@ -49,11 +52,32 @@
 <div class="wrap">
   <header>
     <h1>성동구 아파트 거래 분석 (자동: <code>apt-list.csv</code>)</h1>
-    <span class="pill">1) 자동 로드 → 2) 컬럼 매핑 → 3) 아파트 선택 → 4) 면적 선택</span>
+    <span class="pill">자동 로드 · 컬럼 매핑 확인 · 아파트/면적 선택</span>
   </header>
+
   <div id="err" style="display:none;margin-bottom:12px" class="card section"><div id="errMsg" style="color:#f87171;font-size:13px"></div></div>
 
-  <div class="card section grid cols-3" id="uploader">
+  <!-- 인사이트 카드 -->
+  <div id="insights" class="grid cols-3" style="margin:16px 0;">
+    <div class="card section">
+      <div class="hint">2015~마지막</div>
+      <div style="font-weight:700;margin:4px 0">최고 증감율 아파트</div>
+      <div id="insight15" style="font-size:14px">-</div>
+    </div>
+    <div class="card section">
+      <div class="hint">2019~2023</div>
+      <div style="font-weight:700;margin:4px 0">최고 증감율 아파트</div>
+      <div id="insight19" style="font-size:14px">-</div>
+    </div>
+    <div class="card section">
+      <div class="hint">2024~마지막</div>
+      <div style="font-weight:700;margin:4px 0">최고 증감율 아파트</div>
+      <div id="insight24" style="font-size:14px">-</div>
+    </div>
+  </div>
+
+  <!-- 업로더 카드: 서버 자동 로드이므로 숨김 -->
+  <div class="card section grid cols-3" id="uploader" style="display:none">
     <div>
       <label>CSV 파일</label>
       <div class="row">
@@ -61,7 +85,7 @@
         <button class="primary" id="btnParse">불러오기</button>
         <button id="btnLoadLocal">apt-list.csv 불러오기</button>
       </div>
-      <div class="hint" style="margin-top:8px">기본 파일명: <code>apt-list.csv</code> (동일 폴더). <b>file://</b>로 열면 보안정책으로 차단될 수 있어 HTTP로 여세요.</div>
+      <div class="hint" style="margin-top:8px">file:// 로열면 차단될 수 있어 HTTP에서 열어주세요.</div>
     </div>
     <div>
       <label>컬럼 매핑</label>
@@ -71,11 +95,10 @@
         <select id="colYm"><option value="">거래연월(YYYYMM/YYYY-MM)</option></select>
         <select id="colPrice"><option value="">거래금액(원/만원)</option></select>
       </div>
-      <div class="hint" style="margin-top:8px">자동감지: 아파트/단지명, 전용/면적, ym/거래연월, 금액/가격/매매가 등</div>
     </div>
     <div>
       <label>검색</label>
-      <input id="search" type="text" placeholder="아파트명 검색(예: 트리마제)" />
+      <input id="search" type="text" placeholder="아파트명 검색" />
       <div class="row" style="margin-top:8px">
         <button id="btnReset">초기화</button>
         <a id="btnDownload" class="btn" download="filtered.csv" href="#" style="display:none">필터 결과 CSV 다운로드</a>
@@ -112,7 +135,7 @@
         <div><div class="k">표본</div><div class="v" id="kpiCnt">-</div></div>
       </div>
     </div>
-    <canvas id="chart" style="width:100%;height:300px;max-height: 300px;"></canvas>
+    <canvas id="chart"></canvas>
     <div style="overflow:auto;margin-top:10px">
       <table id="tbl">
         <thead>
@@ -133,337 +156,133 @@
 <script>
 (function(){
   const DEFAULT_CSV = 'apt-list.csv';
-  let RAW = [];
-  let HEAD = [];
+  let RAW = [], HEAD = [];
   let COL = { apt:'', area:'', ym:'', price:'' };
-  let currentApt = null;
-  let currentArea = null; // 라운드된 값
+  let currentApt = null, currentArea = null;
   let chart = null;
 
   const el = {
-    file: qs('#file'),
-    parse: qs('#btnParse'),
-    loadLocal: qs('#btnLoadLocal'),
-    reset: qs('#btnReset'),
-    download: qs('#btnDownload'),
-    colApt: qs('#colApt'),
-    colArea: qs('#colArea'),
-    colYm: qs('#colYm'),
-    colPrice: qs('#colPrice'),
-    search: qs('#search'),
-    aptList: qs('#aptList'),
-    aptCount: qs('#aptCount'),
-    chips: qs('#areaChips'),
-    title: qs('#titleSel'),
-    sub: qs('#subSel'),
-    kpiBox: qs('#kpiBox'),
-    kpiLast: qs('#kpiLast'),
-    kpiMom: qs('#kpiMom'),
-    kpiCnt: qs('#kpiCnt'),
-    tbl: qs('#tbl tbody'),
-    canvas: qs('#chart')
+    file: qs('#file'), parse: qs('#btnParse'), loadLocal: qs('#btnLoadLocal'), reset: qs('#btnReset'), download: qs('#btnDownload'),
+    colApt: qs('#colApt'), colArea: qs('#colArea'), colYm: qs('#colYm'), colPrice: qs('#colPrice'),
+    search: qs('#search'), aptList: qs('#aptList'), aptCount: qs('#aptCount'), chips: qs('#areaChips'),
+    title: qs('#titleSel'), sub: qs('#subSel'), kpiBox: qs('#kpiBox'), kpiLast: qs('#kpiLast'), kpiMom: qs('#kpiMom'), kpiCnt: qs('#kpiCnt'),
+    tbl: qs('#tbl tbody'), canvas: qs('#chart')
   };
 
-  // 초기 자동 실행
   document.addEventListener('DOMContentLoaded', function(){
-    setChartHeight();
+    setFixedChartHeight();
     loadLocalCsv();
   });
-  window.addEventListener('resize', setChartHeight);
 
-  // 이벤트 바인딩
-  el.parse.addEventListener('click', function(){
-    if(!el.file.files[0]){ alert('CSV 파일을 선택하세요'); return; }
-    parseWithPapa(el.file.files[0]);
-  });
-  el.loadLocal.addEventListener('click', loadLocalCsv);
-  el.reset.addEventListener('click', function(){
-    currentApt = null;
-    currentArea = null;
-    el.search.value = '';
-    renderAptList();
-    renderAreas();
-    renderTable([]);
-    setTitle();
-  });
-  el.search.addEventListener('input', function(){ renderAptList(); });
-  [el.colApt, el.colArea, el.colYm, el.colPrice].forEach(function(s){
-    s.addEventListener('change', function(){
-      COL = { apt:el.colApt.value, area:el.colArea.value, ym:el.colYm.value, price:el.colPrice.value };
-      renderAptList();
-      renderAreas();
-      setTitle();
-    });
-  });
+  // 이벤트 (업로더 카드는 숨겨졌지만 기능 유지)
+  if(el.parse){ el.parse.addEventListener('click', function(){ if(!el.file.files[0]){ alert('CSV 파일을 선택하세요'); return; } parseWithPapa(el.file.files[0]); }); }
+  if(el.loadLocal){ el.loadLocal.addEventListener('click', loadLocalCsv); }
+  if(el.reset){ el.reset.addEventListener('click', function(){ currentApt=null; currentArea=null; if(el.search) el.search.value=''; renderAptList(); renderAreas(); renderTable([]); setTitle(); }); }
+  if(el.search){ el.search.addEventListener('input', function(){ renderAptList(); }); }
+  ;[el.colApt, el.colArea, el.colYm, el.colPrice].forEach(function(s){ if(!s) return; s.addEventListener('change', function(){ COL={ apt:el.colApt.value, area:el.colArea.value, ym:el.colYm.value, price:el.colPrice.value }; renderAptList(); renderAreas(); setTitle(); }); });
 
-  // CSV 파서
   function parseWithPapa(fileOrUrl){
-    var opt = {
-      header:true,
-      skipEmptyLines:true,
-      complete:function(res){
-        try{
-          RAW = res.data.map(function(row){
-            return Object.fromEntries(Object.entries(row).map(function(kv){
-              var k = kv[0]; var v = kv[1];
-              return [String(k).trim(), (v==null?'':String(v)).trim()];
-            }));
-          });
-          HEAD = res.meta.fields.map(function(f){ return String(f).trim(); });
-          mountColumnOptions();
-          autoDetectColumns();
-          renderAptList();
-          toast('불러오기 완료: 행 '+ RAW.length.toLocaleString() +'건');
-        }catch(err){ showErr('CSV 파싱 후 처리 중 오류: ' + (err && err.message ? err.message : err)); }
-      },
-      error:function(e){ showErr('CSV 파싱 오류: ' + (e && e.message ? e.message : e)); }
-    };
-    if(typeof fileOrUrl === 'string'){
-      Papa.parse(fileOrUrl, Object.assign({}, opt, { download:true }));
-    }else{
-      Papa.parse(fileOrUrl, opt);
-    }
+    var opt = { header:true, skipEmptyLines:true, complete:function(res){
+      try{
+        RAW = res.data.map(function(row){ return Object.fromEntries(Object.entries(row).map(function(kv){ var k=kv[0], v=kv[1]; return [String(k).trim(), (v==null?'':String(v)).trim()]; })); });
+        HEAD = res.meta.fields.map(function(f){ return String(f).trim(); });
+        mountColumnOptions(); autoDetectColumns(); renderAptList();
+        computeInsights();
+      }catch(err){ showErr('CSV 파싱 후 처리 중 오류: ' + (err && err.message ? err.message : err)); }
+    }, error:function(e){ showErr('CSV 파싱 오류: ' + (e && e.message ? e.message : e)); } };
+    if(typeof fileOrUrl==='string') Papa.parse(fileOrUrl, Object.assign({}, opt, {download:true})); else Papa.parse(fileOrUrl,opt);
   }
 
-  // 같은 폴더의 CSV 자동 로드
   function loadLocalCsv(){
-    // file://로 열면 CORS 때문에 fetch가 실패할 수 있음
-    fetch(DEFAULT_CSV, { cache:'no-store' }).then(function(r){
-      if(!r.ok) throw new Error('['+r.status+'] '+r.statusText);
-      return r.blob();
-    }).then(function(){
-      parseWithPapa(DEFAULT_CSV);
-    }).catch(function(e){
-      showErr('apt-list.csv 자동 로드 실패: ' + (e && e.message ? e.message : e) + '\n\n' +
-              '브라우저 보안 정책 때문에 file://로 여는 경우 차단될 수 있어요.\n' +
-              '아래 중 하나로 실행해 주세요:\n' +
-              '1) 터미널에서 해당 폴더 → python -m http.server 8000 → http://localhost:8000 접속\n' +
-              '2) VSCode Live Server 등 간단한 로컬 웹서버 사용');
-    });
+    fetch(DEFAULT_CSV,{cache:'no-store'}).then(function(r){ if(!r.ok) throw new Error('['+r.status+'] '+r.statusText); return r.blob(); })
+      .then(function(){ parseWithPapa(DEFAULT_CSV); })
+      .catch(function(e){ showErr('apt-list.csv 자동 로드 실패: ' + (e && e.message ? e.message : e) + '\n\nHTTP 서버에서 열어주세요 (예: python -m http.server)'); });
   }
 
-  function mountColumnOptions(){
-    [el.colApt, el.colArea, el.colYm, el.colPrice].forEach(function(sel){
-      sel.innerHTML = '<option value="">선택</option>' + HEAD.map(function(h){ return '<option value="'+esc(h)+'">'+esc(h)+'</option>'; }).join('');
-    });
-  }
-
-  function autoDetectColumns(){
-    function pick(alts){
-      var i, h;
-      for(i=0;i<HEAD.length;i++){
-        h = HEAD[i];
-        for(var j=0;j<alts.length;j++){
-          var a = new RegExp(alts[j], 'i');
-          if(a.test(h)) return h;
-        }
-      }
-      return '';
-    }
-    el.colApt.value   = pick(['아파트','단지','단지명','apt','apartment','건물명']);
-    el.colArea.value  = pick(['전용','면적','m2','m²','area']);
-    el.colYm.value    = pick(['ym','연월','거래연월','년월','yyyymm','month']);
-    el.colPrice.value = pick(['금액','가격','매매','거래','price','amount']);
-    COL = { apt:el.colApt.value, area:el.colArea.value, ym:el.colYm.value, price:el.colPrice.value };
+  function mountColumnOptions(){ [el.colApt, el.colArea, el.colYm, el.colPrice].forEach(function(sel){ if(!sel) return; sel.innerHTML = '<option value="">선택</option>' + HEAD.map(function(h){ return '<option value="'+esc(h)+'">'+esc(h)+'</option>'; }).join(''); }); }
+  function autoDetectColumns(){ function pick(alts){ for(var i=0;i<HEAD.length;i++){ var h=HEAD[i]; for(var j=0;j<alts.length;j++){ if(new RegExp(alts[j],'i').test(h)) return h; } } return ''; }
+    if(el.colApt)  el.colApt.value  = pick(['아파트','단지','단지명','apt','apartment','건물명']);
+    if(el.colArea) el.colArea.value = pick(['전용','면적','m2','m²','area']);
+    if(el.colYm)   el.colYm.value   = pick(['ym','연월','거래연월','년월','yyyymm','month']);
+    if(el.colPrice)el.colPrice.value= pick(['금액','가격','매매','거래','price','amount']);
+    COL={ apt: (el.colApt?el.colApt.value:''), area:(el.colArea?el.colArea.value:''), ym:(el.colYm?el.colYm.value:''), price:(el.colPrice?el.colPrice.value:'') };
   }
 
   function renderAptList(){
     if(!COL.apt){ el.aptList.innerHTML = '<div class="section hint">아파트(단지) 컬럼을 매핑하세요.</div>'; el.aptCount.textContent='0'; return; }
-    var search = norm(el.search.value);
+    var search = norm(el.search?el.search.value:'');
     var map = new Map();
-    RAW.forEach(function(r){
-      var name = (r[COL.apt]||'').trim();
-      if(!name) return;
-      if(search && norm(name).indexOf(search) === -1) return;
-      map.set(name, 1 + (map.get(name)||0));
-    });
+    RAW.forEach(function(r){ var name=(r[COL.apt]||'').trim(); if(!name) return; if(search && norm(name).indexOf(search)===-1) return; map.set(name, 1+(map.get(name)||0)); });
     var items = Array.from(map.entries()).sort(function(a,b){ return a[0].localeCompare(b[0],'ko'); });
     el.aptCount.textContent = items.length;
-    el.aptList.innerHTML = items.map(function(ent){
-      var name = ent[0]; var count = ent[1];
-      return '<div class="item '+(name===currentApt?'active':'')+'" data-apt="'+esc(name)+'">' +
-             '  <div>'+esc(name)+'</div>' +
-             '  <div class="hint">'+count.toLocaleString()+'건</div>' +
-             '</div>';
-    }).join('');
-
-    qsa('#aptList .item').forEach(function(it){
-      it.addEventListener('click', function(){
-        currentApt = it.getAttribute('data-apt');
-        currentArea = null;
-        renderAptList();
-        renderAreas();
-        setTitle();
-        updateFilteredDownload();
-      });
-    });
+    el.aptList.innerHTML = items.map(function(ent){ var name=ent[0], count=ent[1]; return '<div class="item '+(name===currentApt?'active':'')+'" data-apt="'+esc(name)+'">\n  <div>'+esc(name)+'</div>\n  <div class="hint">'+count.toLocaleString()+'건</div>\n</div>'; }).join('');
+    qsa('#aptList .item').forEach(function(it){ it.addEventListener('click', function(){ currentApt = it.getAttribute('data-apt'); currentArea=null; renderAptList(); renderAreas(); setTitle(); updateFilteredDownload(); }); });
   }
 
-  function renderAreas(){
-    if(!currentApt || !COL.area){ el.chips.innerHTML=''; return; }
+  function renderAreas(){ if(!currentApt || !COL.area){ el.chips.innerHTML=''; return; }
     var rows = RAW.filter(function(r){ return (r[COL.apt]||'').trim()===currentApt; });
-    var map = new Map();
-    rows.forEach(function(r){
-      var a = parseArea(r[COL.area]);
-      if(isFinite(a)){
-        var key = roundArea(a);
-        map.set(key, 1 + (map.get(key)||0));
-      }
-    });
+    var map = new Map(); rows.forEach(function(r){ var a=parseArea(r[COL.area]); if(isFinite(a)){ var key=roundArea(a); map.set(key,1+(map.get(key)||0)); } });
     var items = Array.from(map.entries()).sort(function(a,b){ return a[0]-b[0]; });
-    el.chips.innerHTML = items.map(function(ent){
-      var a = ent[0]; var c = ent[1];
-      var py = a * 0.3025;
-      return '<div class="chip '+(currentArea===a?'active':'')+'" data-area="'+a+'">'+a.toFixed(1)+' m² ('+py.toFixed(1)+'평) <span class="hint">'+c+'건</span></div>';
-    }).join('');
-
-    qsa('#areaChips .chip').forEach(function(ch){
-      ch.addEventListener('click', function(){
-        currentArea = parseFloat(ch.getAttribute('data-area'));
-        renderAreas();
-        setTitle();
-        draw();
-        updateFilteredDownload();
-      });
-    });
+    el.chips.innerHTML = items.map(function(ent){ var a=ent[0], c=ent[1], py=a*0.3025; return '<div class="chip '+(currentArea===a?'active':'')+'" data-area="'+a+'">'+a.toFixed(1)+' m² ('+py.toFixed(1)+'평) <span class="hint">'+c+'건</span></div>'; }).join('');
+    qsa('#areaChips .chip').forEach(function(ch){ ch.addEventListener('click', function(){ currentArea=parseFloat(ch.getAttribute('data-area')); renderAreas(); setTitle(); draw(); updateFilteredDownload(); }); });
   }
 
-  function draw(){
-    var rows = getFilteredRows();
-    var byMonth = aggregateByMonth(rows);
-    renderTable(byMonth);
-    renderChart(byMonth);
-  }
+  function draw(){ var rows=getFilteredRows(); var byMonth=aggregateByMonth(rows); renderTable(byMonth); renderChart(byMonth); }
 
   function renderTable(byMonth){
-    var tbody = byMonth.map(function(m){
-      var momTxt = (m.mom==null) ? '-' : ((m.mom>0?'+':'') + m.mom.toFixed(1) + '%');
-      var momColor = (m.mom>0?'#22c55e':(m.mom<0?'#ef4444':'#94a3b8'));
-      return '<tr>' +
-             '  <td>'+m.ym+'</td>' +
-             '  <td>'+m.count+'</td>' +
-             '  <td>'+fmt(m.avg/10000)+'</td>' +
-             '  <td>'+fmt(m.min/10000)+' ~ '+fmt(m.max/10000)+'</td>' +
-             '  <td style="color:'+momColor+'">'+momTxt+'</td>' +
-             '</tr>';
-    }).join('');
+    var tbody = byMonth.slice().reverse().map(function(m){ var momTxt=(m.mom==null)?'-':((m.mom>0?'+':'')+m.mom.toFixed(1)+'%'); var momColor=(m.mom>0?'#22c55e':(m.mom<0?'#ef4444':'#94a3b8')); return '<tr>\n  <td>'+m.ym+'</td>\n  <td>'+m.count+'</td>\n  <td>'+fmt(m.avg/10000)+'</td>\n  <td>'+fmt(m.min/10000)+' ~ '+fmt(m.max/10000)+'</td>\n  <td style="color:'+momColor+'">'+momTxt+'</td>\n</tr>'; }).join('');
     el.tbl.innerHTML = tbody;
-
-    if(byMonth.length){
-      var last = byMonth[byMonth.length-1];
-      el.kpiBox.style.display = 'flex';
-      el.kpiLast.textContent = fmt(last.avg/10000) + ' 만원';
-      el.kpiMom.textContent = (last.mom==null?'-': ((last.mom>0?'+':'')+last.mom.toFixed(1)+'%'));
-      el.kpiCnt.textContent = last.count.toLocaleString() + '건';
-    }else{
-      el.kpiBox.style.display = 'none';
-    }
+    if(byMonth.length){ var last=byMonth[byMonth.length-1]; el.kpiBox.style.display='flex'; el.kpiLast.textContent=fmt(last.avg/10000)+' 만원'; el.kpiMom.textContent=(last.mom==null?'-':((last.mom>0?'+':'')+last.mom.toFixed(1)+'%')); el.kpiCnt.textContent=last.count.toLocaleString()+'건'; } else { el.kpiBox.style.display='none'; }
   }
 
   function renderChart(byMonth){
     var labels = byMonth.map(function(m){ return m.ym; });
     var avg = byMonth.map(function(m){ return Math.round(m.avg/10000); });
     var mom = byMonth.map(function(m){ return m.mom; });
-
-    // y축 범위(만원)
-    var yStats = rangeStats(avg);
-    var yPad = (yStats.max - yStats.min) * 0.10;
-    var yMinMax = niceBounds(yStats.min - yPad, yStats.max + yPad);
-
-    // y1축 범위(%)
+    var yStats=rangeStats(avg), yPad=(yStats.max-yStats.min)*0.10, yMinMax=niceBounds(yStats.min-yPad, yStats.max+yPad);
     var momVals = mom.filter(function(v){ return v!=null && isFinite(v); });
-    var y1Stats = momVals.length ? rangeStats(momVals) : { min:-20, max:20 };
-    var y1Pad = (y1Stats.max - y1Stats.min) * 0.10;
-    var y1MinMax = niceBounds(y1Stats.min - y1Pad, y1Stats.max + y1Pad);
-
+    var y1Stats = momVals.length? rangeStats(momVals) : {min:-20,max:20};
+    var y1Pad=(y1Stats.max-y1Stats.min)*0.10, y1MinMax=niceBounds(y1Stats.min-y1Pad, y1Stats.max+y1Pad);
     if(chart){ chart.destroy(); }
-    chart = new Chart(el.canvas.getContext('2d'), {
-      type: 'line',
-      data: {
-        labels: labels,
-        datasets: [
-          { label:'평균가(만원)', data: avg, tension:0.25, yAxisID:'y' },
-          { label:'전월대비%', data: mom, type:'bar', yAxisID:'y1' }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          y: { position:'left', min:yMinMax[0], max:yMinMax[1], title:{ display:true, text:'만원' }, ticks:{ callback:function(v){ return Number(v).toLocaleString(); } } },
-          y1:{ position:'right', min:y1MinMax[0], max:y1MinMax[1], grid:{ drawOnChartArea:false }, title:{ display:true, text:'%' } }
-        },
-        plugins: { legend:{ display:true }, tooltip:{ mode:'index', intersect:false } }
-      }
-    });
+    chart = new Chart(el.canvas.getContext('2d'),{ type:'line', data:{ labels:labels, datasets:[ {label:'평균가(만원)', data:avg, tension:0.25, yAxisID:'y'}, {label:'전월대비%', data:mom, type:'bar', yAxisID:'y1'} ] }, options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{position:'left', min:yMinMax[0], max:yMinMax[1], title:{display:true,text:'만원'}, ticks:{ callback:function(v){ return Number(v).toLocaleString(); } } }, y1:{position:'right', min:y1MinMax[0], max:y1MinMax[1], grid:{drawOnChartArea:false}, title:{display:true,text:'%'} } }, plugins:{ legend:{display:true}, tooltip:{mode:'index', intersect:false} } });
   }
 
-  function aggregateByMonth(rows){
-    var map = new Map();
-    rows.forEach(function(r){
-      var ym = normYm(r[COL.ym]); if(!ym) return;
-      var price = parsePrice(r[COL.price]); if(!isFinite(price)) return;
-      var s = map.get(ym) || { sum:0, min:Infinity, max:-Infinity, count:0 };
-      s.sum += price; s.min = Math.min(s.min, price); s.max = Math.max(s.max, price); s.count += 1;
-      map.set(ym, s);
-    });
-    var items = Array.from(map.entries()).map(function(ent){
-      var ym = ent[0]; var s = ent[1];
-      return { ym:ym, avg:s.sum/s.count, min:s.min, max:s.max, count:s.count };
-    }).sort(function(a,b){ return a.ym.localeCompare(b.ym); });
-    for(var i=0;i<items.length;i++){
-      var prev = items[i-1];
-      items[i].mom = prev ? ((items[i].avg - prev.avg)/prev.avg*100) : null;
-    }
-    return items;
-  }
+  function aggregateByMonth(rows){ var map=new Map(); rows.forEach(function(r){ var ym=normYm(r[COL.ym]); if(!ym) return; var price=parsePrice(r[COL.price]); if(!isFinite(price)) return; var s=map.get(ym)||{sum:0,min:Infinity,max:-Infinity,count:0}; s.sum+=price; s.min=Math.min(s.min,price); s.max=Math.max(s.max,price); s.count++; map.set(ym,s); }); var items=Array.from(map.entries()).map(function(ent){ var ym=ent[0], s=ent[1]; return {ym:ym, avg:s.sum/s.count, min:s.min, max:s.max, count:s.count}; }).sort(function(a,b){ return a.ym.localeCompare(b.ym); }); for(var i=0;i<items.length;i++){ var prev=items[i-1]; items[i].mom = prev? ((items[i].avg-prev.avg)/prev.avg*100) : null; } return items; }
 
-  function getFilteredRows(){
-    if(!currentApt || !COL.area){ return []; }
-    return RAW.filter(function(r){
-      return (r[COL.apt]||'').trim()===currentApt && sameArea(parseArea(r[COL.area]), currentArea);
-    });
-  }
+  function getFilteredRows(){ if(!currentApt || !COL.area) return []; return RAW.filter(function(r){ return (r[COL.apt]||'').trim()===currentApt && sameArea(parseArea(r[COL.area]), currentArea); }); }
+  function updateFilteredDownload(){ var rows=getFilteredRows(); if(!rows.length){ el.download.style.display='none'; return; } var csv=toCSV(rows); var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}); var url=URL.createObjectURL(blob); el.download.href=url; el.download.style.display='inline-flex'; }
+  function setTitle(){ var a=currentApt?currentApt:'거래 내역'; var b=currentArea?(currentArea.toFixed(1)+' m² ('+(currentArea*0.3025).toFixed(1)+'평)'):''; el.title.textContent=currentArea? (a+' · '+b) : a; el.sub.textContent = (!currentApt? '아파트와 면적을 선택하세요' : (currentArea? '월별 평균가/증감률' : '면적을 선택하세요')); if(currentApt && currentArea){ draw(); } else { el.tbl.innerHTML=''; if(chart) chart.destroy(); } }
 
-  function updateFilteredDownload(){
-    var rows = getFilteredRows();
-    if(!rows.length){ el.download.style.display='none'; return; }
-    var csv = toCSV(rows);
-    var blob = new Blob([csv], { type:'text/csv;charset=utf-8;' });
-    var url = URL.createObjectURL(blob);
-    el.download.href = url;
-    el.download.style.display = 'inline-flex';
+  // ---------- 인사이트: 아파트별 기간 최저~최고 증감률 상위 ----------
+  function computeInsights(){
+    try{
+      var aptMap=new Map(); // apt -> Map(ym->{sum,count})
+      RAW.forEach(function(r){ var apt=(r[COL.apt]||'').trim(); if(!apt) return; var ym=normYm(r[COL.ym]); if(!ym) return; var price=parsePrice(r[COL.price]); if(!isFinite(price)) return; var m=aptMap.get(apt); if(!m){ m=new Map(); aptMap.set(apt,m);} var s=m.get(ym)||{sum:0,count:0}; s.sum+=price; s.count++; m.set(ym,s); });
+      var seriesByApt=new Map(); aptMap.forEach(function(monthMap,apt){ var arr=Array.from(monthMap.entries()).map(function(ent){return {ym:ent[0], avg:ent[1].sum/ent[1].count};}).sort(function(a,b){return a.ym.localeCompare(b.ym);}); seriesByApt.set(apt,arr); });
+      var allYms=[]; aptMap.forEach(function(m){ m.forEach(function(_,ym){ allYms.push(ym); }); }); if(!allYms.length) return; allYms.sort(); var lastYm=allYms[allYms.length-1];
+      var r15=maxGrowth(seriesByApt,'2015-01',lastYm); var r19=maxGrowth(seriesByApt,'2019-01','2023-12'); var r24=maxGrowth(seriesByApt,'2024-01',lastYm);
+      renderInsights('insight15',r15); renderInsights('insight19',r19); renderInsights('insight24',r24);
+    }catch(e){ console.error(e); }
   }
-
-  function setTitle(){
-    var a = currentApt ? currentApt : '거래 내역';
-    var b = currentArea ? (currentArea.toFixed(1) + ' m² (' + (currentArea*0.3025).toFixed(1) + '평)') : '';
-    el.title.textContent = currentArea ? (a + ' · ' + b) : a;
-    el.sub.textContent = (!currentApt ? '아파트와 면적을 선택하세요' : (currentArea ? '월별 평균가/증감률' : '면적을 선택하세요'));
-    if(currentApt && currentArea){ draw(); } else { el.tbl.innerHTML=''; if(chart) chart.destroy(); }
-  }
+  function maxGrowth(seriesByApt,startYm,endYm){ var best=null; seriesByApt.forEach(function(arr,apt){ var seg=arr.filter(function(p){ return p.ym>=startYm && p.ym<=endYm; }); if(seg.length<2) return; var minV=Infinity,maxV=-Infinity,minYm='',maxYm=''; seg.forEach(function(p){ if(p.avg<minV){minV=p.avg;minYm=p.ym;} if(p.avg>maxV){maxV=p.avg;maxYm=p.ym;} }); if(!isFinite(minV)||!isFinite(maxV)||minV<=0) return; var pct=(maxV-minV)/minV*100; if(!best||pct>best.pct){ best={apt:apt,pct:pct,min:minV,max:maxV,minYm:minYm,maxYm:maxYm}; } }); return best; }
+  function renderInsights(id,r){ var box=qs('#'+id); if(!box) return; if(!r){ box.innerHTML='<span class="hint">데이터 없음</span>'; return;} box.innerHTML='<div style="font-weight:600">'+esc(r.apt)+'</div>'+'<div class="hint">최저 '+fmt(r.min/10000)+' 만원 ('+r.minYm+') → 최고 '+fmt(r.max/10000)+' 만원 ('+r.maxYm+')</div>'+'<div style="margin-top:6px;font-size:22px;font-weight:800">'+r.pct.toFixed(1)+'%</div>'; }
 
   // ---------- 유틸 ----------
-  function setChartHeight(){
-    var ratio = (window.innerWidth < 768) ? 0.45 : 0.5; // 모바일 45%, 데스크탑 50%
-    var h = Math.min(560, Math.max(260, Math.floor(window.innerHeight * ratio)));
-    el.canvas.style.height = h + 'px';
-  }
+  function setFixedChartHeight(){ el.canvas.style.height='300px'; el.canvas.style.maxHeight='300px'; }
   function norm(s){ return String(s).toLowerCase().replace(/\s+/g,''); }
   function qs(s,sc){ return (sc||document).querySelector(s); }
   function qsa(s,sc){ return Array.prototype.slice.call((sc||document).querySelectorAll(s)); }
-  function esc(s){ return String(s).replace(/[&<>"']/g, function(m){ return { '&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;','\'':'&#39;' }[m]; }); }
-  function parseArea(v){ if(v==null) return NaN; var n = +String(v).replace(/[^0-9.]/g,''); return isFinite(n)? n : NaN; }
+  function esc(s){ return String(s).replace(/[&<>"']/g,function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[m]; }); }
+  function parseArea(v){ if(v==null) return NaN; var n=+String(v).replace(/[^0-9.]/g,''); return isFinite(n)? n : NaN; }
   function roundArea(a){ return Math.round(a*10)/10; }
   function sameArea(a,b){ if(!isFinite(a)||!isFinite(b)) return false; return roundArea(a)===roundArea(b); }
-  function normYm(v){ if(!v) return ''; var s=String(v).trim(); var m = s.match(/^(\d{4})\D?(\d{1,2})$/) || s.match(/^(\d{4})\D(\d{1,2})\D/); if(m){ var y=m[1]; var mo=('0'+m[2]).slice(-2); return y+'-'+mo; } return ''; }
-  function parsePrice(v){ if(v==null||v==='') return NaN; var n = +String(v).replace(/[^0-9.-]/g,''); if(!isFinite(n)) return NaN; if(n<1000000) return n*10000; return n; }
+  function normYm(v){ if(!v) return ''; var s=String(v).trim(); var m=s.match(/^(\d{4})\D?(\d{1,2})$/)||s.match(/^(\d{4})\D(\d{1,2})\D/); if(m){ var y=m[1], mo=('0'+m[2]).slice(-2); return y+'-'+mo; } return ''; }
+  function parsePrice(v){ if(v==null||v==='') return NaN; var n=+String(v).replace(/[^0-9.-]/g,''); if(!isFinite(n)) return NaN; if(n<1000000) return n*10000; return n; }
   function fmt(n){ return isFinite(n)? Math.round(n).toLocaleString() : '-'; }
-  function toCSV(rows){ if(!rows.length) return ''; var head = Object.keys(rows[0]); var escCsv = function(s){ return '"'+ String(s).replace(/"/g,'""') + '"'; }; return [head.join(',' )].concat(rows.map(function(r){ return head.map(function(h){ return escCsv(r[h]==null?'':r[h]); }).join(','); })).join('\n'); }
-  function rangeStats(arr){ var min=Infinity,max=-Infinity; arr.forEach(function(v){ if(v==null||!isFinite(v)) return; if(v<min) min=v; if(v>max) max=v; }); if(min===Infinity){ min=0; max=1; } if(min===max){ min=min*0.9; max=max*1.1 + 1; } return {min:min, max:max}; }
-  function niceBounds(min,max){ var span = Math.max(1, max - min); var step = niceNum(span/6, true); var niceMin = Math.floor(min/step)*step; var niceMax = Math.ceil(max/step)*step; return [niceMin, niceMax]; }
-  function niceNum(x, round){ var exp = Math.floor(Math.log10(x)); var f = x / Math.pow(10, exp); var nf; if(round){ if(f<1.5) nf=1; else if(f<3) nf=2; else if(f<7) nf=5; else nf=10; } else { if(f<=1) nf=1; else if(f<=2) nf=2; else if(f<=5) nf=5; else nf=10; } return nf * Math.pow(10, exp); }
-  function toast(msg){ console.log(msg); }
+  function toCSV(rows){ if(!rows.length) return ''; var head=Object.keys(rows[0]); var escCsv=function(s){ return '"'+String(s).replace(/"/g,'""')+'"'; }; return [head.join(',')].concat(rows.map(function(r){ return head.map(function(h){ return escCsv(r[h]==null?'':r[h]); }).join(','); })).join('\n'); }
+  function rangeStats(arr){ var min=Infinity,max=-Infinity; arr.forEach(function(v){ if(v==null||!isFinite(v)) return; if(v<min) min=v; if(v>max) max=v; }); if(min===Infinity){ min=0; max=1; } if(min===max){ min=min*0.9; max=max*1.1+1; } return {min:min,max:max}; }
+  function niceBounds(min,max){ var span=Math.max(1,max-min); var step=niceNum(span/6,true); var niceMin=Math.floor(min/step)*step; var niceMax=Math.ceil(max/step)*step; return [niceMin,niceMax]; }
+  function niceNum(x,round){ var exp=Math.floor(Math.log10(x)); var f=x/Math.pow(10,exp); var nf; if(round){ if(f<1.5) nf=1; else if(f<3) nf=2; else if(f<7) nf=5; else nf=10; } else { if(f<=1) nf=1; else if(f<=2) nf=2; else if(f<=5) nf=5; else nf=10; } return nf*Math.pow(10,exp); }
   function showErr(m){ var box=qs('#err'); var msgEl=qs('#errMsg'); if(box&&msgEl){ msgEl.textContent=String(m); box.style.display='block'; } console.error(m); }
 })();
 </script>
