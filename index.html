@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>성동구 아파트 거래 분석</title>
   <link rel="icon" href="./favicon.png?v=1" type="image/png">
-  <link rel="icon" href="./favicon.png" type="image/png">
   <link rel="apple-touch-icon" href="./favicon.png">
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
@@ -14,41 +13,96 @@
     /* Pretendard Variable (Korean UI font) */
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css');
 
-    :root{ --bg:#0b0f1a; --panel:#111827; --ink:#e5e7eb; --muted:#94a3b8; --line:#1f2937; --brand:#60a5fa; --chip:#1f2937 }
+    :root{
+      --bg:#0b0f1a; --panel:#111827; --ink:#e5e7eb; --muted:#94a3b8;
+      --line:#1f2937; --brand:#60a5fa; --chip:#1f2937; --ok:#22c55e; --down:#ef4444
+    }
     *{ box-sizing:border-box }
-    body{ margin:0; background:linear-gradient(180deg,#0b0f1a 0%,#0f1628 100%); color:var(--ink); font-family:'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', Segoe UI, Roboto, system-ui; }
-    .wrap{ max-width:1200px; margin:24px auto; padding:0 16px 48px }
-    header{ display:flex; gap:16px; align-items:center; flex-wrap:wrap; margin-bottom:16px }
-    h1{ font-size:20px; margin:0; letter-spacing:-.2px }
+    html,body{ height:100% }
+    body{
+      margin:0; background:linear-gradient(180deg,#0b0f1a 0%,#0f1628 100%);
+      color:var(--ink);
+      font-family:'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', Segoe UI, Roboto, system-ui;
+      -webkit-tap-highlight-color:transparent;
+    }
+    .wrap{ max-width:1200px; margin:24px auto; padding:0 16px 64px }
+    header{ display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin-bottom:12px }
+    h1{ font-size:clamp(18px,2.4vw,22px); margin:0; letter-spacing:-.2px; line-height:1.2 }
     .card{ background:var(--panel); border:1px solid var(--line); border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,.25) }
     .section{ padding:16px }
     .grid{ display:grid; gap:16px }
     .grid.cols-2{ grid-template-columns:1fr 1fr }
     .grid.cols-3{ grid-template-columns:1fr 1fr 1fr }
     label{ font-size:12px; color:var(--muted) }
-    input[type="file"],select,button,.chip{ border-radius:10px; border:1px solid var(--line); background:#0d1426; color:var(--ink); padding:10px 12px }
-    input[type="text"]{ border-radius:10px; border:1px solid var(--line); background:#0d1426; color:var(--ink); padding:10px 12px; width:100% }
+    input[type="file"],select,button,.chip{
+      border-radius:12px; border:1px solid var(--line); background:#0d1426; color:var(--ink);
+      padding:12px 14px; min-height:44px; line-height:1; font-size:14px
+    }
+    input[type="text"]{
+      border-radius:12px; border:1px solid var(--line); background:#0d1426; color:var(--ink);
+      padding:12px 14px; width:100%; min-height:44px; font-size:14px
+    }
     button{ cursor:pointer }
     button.primary{ background:var(--brand); color:#081226; border:none }
     .row{ display:flex; gap:12px; align-items:center; flex-wrap:wrap }
-    .chips{ display:flex; gap:8px; flex-wrap:wrap }
-    .chip{ background:var(--chip); cursor:pointer }
+    .chips{
+      display:flex; gap:8px; flex-wrap:nowrap; overflow-x:auto; padding-bottom:4px;
+      scrollbar-width:thin; -webkit-overflow-scrolling:touch
+    }
+    .chips::-webkit-scrollbar{ height:6px }
+    .chips::-webkit-scrollbar-thumb{ background:#2b3a57; border-radius:6px }
+    .chip{ background:var(--chip); cursor:pointer; user-select:none; white-space:nowrap }
+    .chip:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible{
+      outline:2px solid var(--brand); outline-offset:2px
+    }
     .chip.active{ outline:2px solid var(--brand) }
-    .list{ max-height:360px; overflow:auto; border:1px solid var(--line); border-radius:12px }
-    .item{ display:flex; justify-content:space-between; gap:12px; padding:10px 12px; border-bottom:1px dashed #1f2937; cursor:pointer }
+
+    .list{
+      max-height:min(360px,50vh); overflow:auto; border:1px solid var(--line); border-radius:12px
+    }
+    .item{ display:flex; justify-content:space-between; gap:12px; padding:12px 12px; border-bottom:1px dashed #1f2937; cursor:pointer }
     .item:hover{ background:#0d1426 }
     .item.active{ background:#11203b }
-    table{ width:100%; border-collapse:collapse; font-size:13px }
-    th,td{ padding:10px 8px; border-bottom:1px solid #1f2937; text-align:right }
-    th:first-child,td:first-child{ text-align:left }
-    .pill{ display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border:1px solid var(--line); border-radius:999px; color:var(--muted) }
-    .kpi{ display:flex; gap:16px; flex-wrap:wrap }
+    .pill{ display:inline-flex; align-items:center; gap:6px; padding:8px 12px; border:1px solid var(--line); border-radius:999px; color:var(--muted); min-height:36px }
+
+    .kpi{ display:flex; gap:12px; flex-wrap:wrap }
     .kpi>div{ background:#0d1426; border:1px solid var(--line); border-radius:12px; padding:12px 16px; min-width:160px }
-    .kpi .v{ font-size:18px }
+    .kpi .k{ font-size:12px; color:var(--muted) }
+    .kpi .v{ font-size:clamp(16px,2.4vw,18px) }
+
     .hint{ color:var(--muted); font-size:12px }
-    a.btn{ color:#081226; background:var(--brand); border-radius:10px; padding:8px 12px; text-decoration:none; display:inline-flex; align-items:center; gap:6px }
-    canvas{display:block !important;max-width:100% !important;height:300px !important;max-height:300px !important}
+    a.btn{ color:#081226; background:var(--brand); border-radius:12px; padding:10px 14px; text-decoration:none; display:inline-flex; align-items:center; gap:6px; min-height:44px }
+
+    .table-wrap{ overflow:auto; border-radius:12px }
+    table{ width:100%; border-collapse:collapse; font-size:13px; min-width:720px }
+    th,td{ padding:12px 10px; border-bottom:1px solid #1f2937; text-align:right; vertical-align:middle }
+    th:first-child,td:first-child{ text-align:left; position:sticky; left:0; background:var(--panel) }
+    thead th{ position:sticky; top:0; background:#0f1626; z-index:1 }
+
+    canvas{ display:block !important; max-width:100% !important; height:auto !important; max-height:none !important }
     #errMsg{ white-space:pre-line }
+
+    /* ------- 인사이트 카드 그리드: 완전 반응형 ------- */
+    #insights{
+      grid-template-columns: repeat(4, 1fr);
+    }
+    @media (max-width:1024px){
+      .grid.cols-2{ grid-template-columns:1fr }
+      .grid.cols-3{ grid-template-columns:1fr 1fr }
+      #insights{ grid-template-columns: repeat(2, 1fr) }
+    }
+    @media (max-width:640px){
+      .wrap{ padding:0 12px 72px }
+      header{ gap:8px }
+      #insights{ grid-template-columns:1fr }
+      .kpi>div{ min-width:unset; flex:1 }
+      .list{ max-height:50vh }
+    }
+
+    /* motion reduce */
+    @media (prefers-reduced-motion: reduce){
+      *{ transition:none !important; animation:none !important }
+    }
   </style>
 </head>
 <body>
@@ -61,7 +115,7 @@
   <div id="err" style="display:none;margin-bottom:12px" class="card section"><div id="errMsg" style="color:#f87171;font-size:13px"></div></div>
 
   <!-- 상단 인사이트 카드: 아파트명+면적(평수) 그룹 기준 -->
-  <div id="insights" class="grid" style="margin:16px 0; grid-template-columns:1fr 1fr 1fr 1fr;">
+  <div id="insights" class="grid" style="margin:16px 0;">
     <div class="card section">
       <div class="hint">전역 · 아파트+면적 그룹</div>
       <div style="font-weight:700;margin:4px 0">거래량 Top 3</div>
@@ -93,7 +147,7 @@
         <button class="primary" id="btnParse">불러오기</button>
         <button id="btnLoadLocal">apt-list.csv 불러오기</button>
       </div>
-      <div class="hint" style="margin-top:8px">file:// 로열면 차단될 수 있어 HTTP에서 열어주세요.</div>
+      <div class="hint" style="margin-top:8px">file:// 로 열면 차단될 수 있어 HTTP에서 열어주세요.</div>
     </div>
     <div>
       <label>컬럼 매핑</label>
@@ -143,8 +197,10 @@
         <div><div class="k">표본</div><div class="v" id="kpiCnt">-</div></div>
       </div>
     </div>
+
     <canvas id="chart"></canvas>
-    <div style="overflow:auto;margin-top:10px">
+
+    <div class="table-wrap" style="margin-top:10px">
       <table id="tbl">
         <thead>
           <tr>
@@ -181,9 +237,16 @@
   };
 
   document.addEventListener('DOMContentLoaded', function(){
-    setFixedChartHeight();
+    setResponsiveChartHeight();
     loadLocalCsv();
+    window.addEventListener('resize', onResize, { passive:true });
   });
+
+  function onResize(){
+    const prevH = el.canvas.style.height;
+    setResponsiveChartHeight();
+    if(chart && el.canvas.style.height !== prevH){ chart.resize(); }
+  }
 
   // 이벤트 (업로더 카드는 숨겨졌지만 기능 유지)
   if(el.parse){ el.parse.addEventListener('click', function(){ if(!el.file.files[0]){ alert('CSV 파일을 선택하세요'); return; } parseWithPapa(el.file.files[0]); }); }
@@ -278,9 +341,9 @@
     // 표는 최신→과거(역순)로 출력
     var rows = byMonth.map(function(m, i){
       var momTxt=(m.mom==null)?'-':((m.mom>0?'+':'')+m.mom.toFixed(1)+'%');
-      var momColor=(m.mom>0?'#22c55e':(m.mom<0?'#ef4444':'#94a3b8'));
+      var momColor=(m.mom>0?'var(--ok)':(m.mom<0?'var(--down)':'#94a3b8'));
       var cumTxt=(cum[i]==null)?'-':((cum[i]>0?'+':'')+cum[i].toFixed(1)+'%');
-      var cumColor=(cum[i]>0?'#22c55e':(cum[i]<0?'#ef4444':'#94a3b8'));
+      var cumColor=(cum[i]>0?'var(--ok)':(cum[i]<0?'var(--down)':'#94a3b8'));
       return '<tr>' +
              '  <td>'+m.ym+'</td>' +
              '  <td>'+m.count+'</td>' +
@@ -325,6 +388,7 @@
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        aspectRatio: 2, /* 가로 모드에서 보기 좋게 */
         scales: {
           y: {
             position: 'left',
@@ -341,7 +405,10 @@
             title: { display: true, text: '%' }
           }
         },
-        plugins: { legend: { display: true }, tooltip: { mode: 'index', intersect: false } }
+        plugins: {
+          legend: { display: true, labels:{ boxWidth:12, boxHeight:12 } },
+          tooltip: { mode: 'index', intersect: false }
+        }
       }
     });
   }
@@ -460,21 +527,21 @@
     var volBox = qs('#cardVol'); var highBox=qs('#cardHigh'); var g15Box=qs('#cardG15'); var g24Box=qs('#cardG24');
     if(volBox){ volBox.innerHTML = renderList(volTop, function(r){
       var parts=r.key.split('|'); var apt=parts[0]; var area=parseFloat(parts[1]);
-      return '<div style="display:flex;justify-content:space-between"><span>'+groupLabel(apt,area)+'</span><span class="hint">'+r.count.toLocaleString()+'건</span></div>';
+      return '<div style="display:flex;justify-content:space-between;gap:8px"><span>'+groupLabel(apt,area)+'</span><span class="hint">'+r.count.toLocaleString()+'건</span></div>';
     }); }
     if(highBox){ highBox.innerHTML = renderList(highTop, function(r){
       var parts=r.key.split('|'); var apt=parts[0]; var area=parseFloat(parts[1]);
-      return '<div style="display:flex;justify-content:space-between"><span>'+groupLabel(apt,area)+'</span><span class="hint">'+fmt(r.max/10000)+' 만원</span></div>';
+      return '<div style="display:flex;justify-content:space-between;gap:8px"><span>'+groupLabel(apt,area)+'</span><span class="hint">'+fmt(r.max/10000)+' 만원</span></div>';
     }); }
     if(g15Box){ g15Box.innerHTML = renderList(g15, function(r){
       var parts=r.key.split('|'); var apt=parts[0]; var area=parseFloat(parts[1]);
-      return '<div style="display:flex;justify-content:space-between"><span>'+groupLabel(apt,area)+'</span><span class="hint">'+r.pct.toFixed(1)+'%</span></div>' +
-             '<div class="hint">최저 '+fmt(r.min/10000)+' ('+r.minYm+') → 최고 '+fmt(r.max/10000)+' ('+r.maxYm+')</div>';
+      return '<div style="display:flex;justify-content:space-between;gap:8px"><span>'+groupLabel(apt,area)+'</span><span class="hint">'+r.pct.toFixed(1)+'%</span></div>' +
+             '<div class="hint" style="margin-top:2px">최저 '+fmt(r.min/10000)+' ('+r.minYm+') → 최고 '+fmt(r.max/10000)+' ('+r.maxYm+')</div>';
     }); }
     if(g24Box){ g24Box.innerHTML = renderList(g24, function(r){
       var parts=r.key.split('|'); var apt=parts[0]; var area=parseFloat(parts[1]);
-      return '<div style="display:flex;justify-content:space-between"><span>'+groupLabel(apt,area)+'</span><span class="hint">'+r.pct.toFixed(1)+'%</span></div>' +
-             '<div class="hint">최저 '+fmt(r.min/10000)+' ('+r.minYm+') → 최고 '+fmt(r.max/10000)+' ('+r.maxYm+')</div>';
+      return '<div style="display:flex;justify-content:space-between;gap:8px"><span>'+groupLabel(apt,area)+'</span><span class="hint">'+r.pct.toFixed(1)+'%</span></div>' +
+             '<div class="hint" style="margin-top:2px">최저 '+fmt(r.min/10000)+' ('+r.minYm+') → 최고 '+fmt(r.max/10000)+' ('+r.maxYm+')</div>';
     }); }
   }
 
@@ -482,7 +549,7 @@
     if(!arr||!arr.length) return '<div class="hint">데이터 없음</div>';
     var html='';
     for(var i=0;i<arr.length;i++){
-      html += '<div style="padding:6px 0;border-bottom:1px dashed #1f2937">' +
+      html += '<div style="padding:8px 0;border-bottom:1px dashed #1f2937">' +
               '<div class="hint">#'+(i+1)+'</div>' + rowRender(arr[i]) +
               '</div>';
     }
@@ -490,13 +557,18 @@
   }
 
   /* ---------------- 유틸 ---------------- */
-  function setFixedChartHeight(){ el.canvas.style.height='300px'; el.canvas.style.maxHeight='300px'; }
+  function setResponsiveChartHeight(){
+    var w = window.innerWidth || document.documentElement.clientWidth;
+    var px = (w <= 640) ? 220 : (w <= 1024 ? 260 : 300);
+    el.canvas.style.height = px + 'px';
+    el.canvas.style.maxHeight = px + 'px';
+  }
   function norm(s){ return String(s).toLowerCase().replace(/\s+/g,''); }
   function qs(s,sc){ return (sc||document).querySelector(s); }
   function qsa(s,sc){ return Array.prototype.slice.call((sc||document).querySelectorAll(s)); }
   function esc(s){
     return String(s).replace(/[&<>"']/g, function(m){
-      var map = {"&":"&amp;","<":"&lt;"," >":"&gt;","\"":"&quot;","'":"&#39;"};
+      var map = {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"};
       return map[m] || m;
     });
   }
