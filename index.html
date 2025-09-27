@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>성동구 아파트 거래 분석</title>
-  <link rel="icon" href="./favicon.png?v=1" type="image/png">
+  <link rel="icon" href="./favicon.png?v=1" type="image/ng">
   <link rel="apple-touch-icon" href="./favicon.png">
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
@@ -381,8 +381,7 @@
 <body>
 <div class="wrap">
   <header>
-    <h1>성동구 아파트 거래 분석</h1>
-    <span class="pill">실거래 인사이트 대시보드</span>
+    <span class="pill">성동구 아파트 거래 대시보드</span>
   </header>
 
   <div id="err" style="display:none;margin-bottom:12px" class="card section"><div id="errMsg" style="color:#f87171;font-size:13px"></div></div>
@@ -442,14 +441,13 @@
       <div class="row" style="justify-content:space-between">
         <div>
           <div style="font-weight:600;margin-bottom:8px">아파트 리스트</div>
-          <div class="hint">총 <span id="aptCount">0</span>개 단지</div>
+          <div style="margin-bottom:8px" class="hint">총 <span id="aptCount">0</span>개 단지</div>
         </div>
       </div>
       <div class="list" id="aptList"></div>
     </div>
     <div class="card section">
       <div style="font-weight:600;margin-bottom:8px">면적 그룹</div>
-      <div class="hint">단위: m² (괄호안은 평)</div>
       <div class="chips" id="areaChips"></div>
     </div>
   </div>
@@ -457,8 +455,8 @@
   <div class="card section" style="margin-top:16px">
     <div class="row" style="justify-content:space-between;align-items:flex-end">
       <div>
-        <div style="font-weight:700;font-size:18px" id="titleSel">거래 내역</div>
-        <div class="hint" id="subSel">아파트와 면적을 선택하세요</div>
+        <div style="font-weight:700;margin-bottom:4px;font-size:18px" id="titleSel">거래 내역</div>
+        <div Style="margin-bottom:8px" class="hint" id="subSel">아파트와 면적을 선택하세요</div>
       </div>
       <div class="kpi" id="kpiBox" style="display:none; margin-top:10px">
         <!-- <div><div class="k">최근월 평균가</div><div class="v" id="kpiLast">-</div></div>
