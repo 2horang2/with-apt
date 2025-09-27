@@ -57,22 +57,27 @@
 
   <div id="err" style="display:none;margin-bottom:12px" class="card section"><div id="errMsg" style="color:#f87171;font-size:13px"></div></div>
 
-  <!-- 인사이트 카드 -->
-  <div id="insights" class="grid cols-3" style="margin:16px 0;">
+  <!-- 상단 인사이트 카드: 아파트명+면적(평수) 그룹 기준 -->
+  <div id="insights" class="grid" style="margin:16px 0; grid-template-columns:1fr 1fr 1fr 1fr;">
     <div class="card section">
-      <div class="hint">2015~마지막</div>
-      <div style="font-weight:700;margin:4px 0">최고 증감율 아파트</div>
-      <div id="insight15" style="font-size:14px">-</div>
+      <div class="hint">전역 · 아파트+면적 그룹</div>
+      <div style="font-weight:700;margin:4px 0">거래량 Top 3</div>
+      <div id="cardVol" style="font-size:14px">-</div>
     </div>
     <div class="card section">
-      <div class="hint">2019~2023</div>
-      <div style="font-weight:700;margin:4px 0">최고 증감율 아파트</div>
-      <div id="insight19" style="font-size:14px">-</div>
+      <div class="hint">전역 · 아파트+면적 그룹</div>
+      <div style="font-weight:700;margin:4px 0">최고가 Top 3</div>
+      <div id="cardHigh" style="font-size:14px">-</div>
     </div>
     <div class="card section">
-      <div class="hint">2024~마지막</div>
-      <div style="font-weight:700;margin:4px 0">최고 증감율 아파트</div>
-      <div id="insight24" style="font-size:14px">-</div>
+      <div class="hint">2015~현재 · 월평균 최저→최고</div>
+      <div style="font-weight:700;margin:4px 0">증가율 Top 3</div>
+      <div id="cardG15" style="font-size:14px">-</div>
+    </div>
+    <div class="card section">
+      <div class="hint">2014~현재 · 월평균 최저→최고</div>
+      <div style="font-weight:700;margin:4px 0">증가율 Top 3</div>
+      <div id="cardG14" style="font-size:14px">-</div>
     </div>
   </div>
 
@@ -160,6 +165,7 @@
   let COL = { apt:'', area:'', ym:'', price:'' };
   let currentApt = null, currentArea = null;
   let chart = null;
+  let LAST_YM = '';
 
   const el = {
     file: qs('#file'), parse: qs('#btnParse'), loadLocal: qs('#btnLoadLocal'), reset: qs('#btnReset'), download: qs('#btnDownload'),
@@ -187,7 +193,8 @@
         RAW = res.data.map(function(row){ return Object.fromEntries(Object.entries(row).map(function(kv){ var k=kv[0], v=kv[1]; return [String(k).trim(), (v==null?'':String(v)).trim()]; })); });
         HEAD = res.meta.fields.map(function(f){ return String(f).trim(); });
         mountColumnOptions(); autoDetectColumns(); renderAptList();
-        computeInsights();
+        determineYmBounds();
+        computeGlobalInsights();
       }catch(err){ showErr('CSV 파싱 후 처리 중 오류: ' + (err && err.message ? err.message : err)); }
     }, error:function(e){ showErr('CSV 파싱 오류: ' + (e && e.message ? e.message : e)); } };
     if(typeof fileOrUrl==='string') Papa.parse(fileOrUrl, Object.assign({}, opt, {download:true})); else Papa.parse(fileOrUrl,opt);
@@ -244,8 +251,7 @@
     var y1Stats = momVals.length? rangeStats(momVals) : {min:-20,max:20};
     var y1Pad=(y1Stats.max-y1Stats.min)*0.10, y1MinMax=niceBounds(y1Stats.min-y1Pad, y1Stats.max+y1Pad);
     if(chart){ chart.destroy(); }
-    const ctx = document.getElementById('myChart').getContext('2d');
-    new Chart(ctx, {
+    chart = new Chart(el.canvas.getContext('2d'), {
       type: 'line',
       data: {
         labels: labels,
@@ -263,11 +269,7 @@
             min: yMinMax[0],
             max: yMinMax[1],
             title: { display: true, text: '만원' },
-            ticks: {
-              callback: function(v) {
-                return Number(v).toLocaleString();
-              }
-            }
+            ticks: { callback: function(v){ return Number(v).toLocaleString(); } }
           },
           y1: {
             position: 'right',
@@ -277,14 +279,9 @@
             title: { display: true, text: '%' }
           }
         },
-        plugins: {
-          legend: { display: true },
-          tooltip: { mode: 'index', intersect: false }
-        }
+        plugins: { legend: { display: true }, tooltip: { mode: 'index', intersect: false } }
       }
-    });   
-    
-   // chart = new Chart(el.canvas.getContext('2d'),{ type:'line', data:{ labels:labels, datasets:[ {label:'평균가(만원)', data:avg, tension:0.25, yAxisID:'y'}, {label:'전월대비%', data:mom, type:'bar', yAxisID:'y1'} ] }, options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{position:'left', min:yMinMax[0], max:yMinMax[1], title:{display:true,text:'만원'}, ticks:{ callback:function(v){ return Number(v).toLocaleString(); } } }, y1:{position:'right', min:y1MinMax[0], max:y1MinMax[1], grid:{drawOnChartArea:false}, title:{display:true,text:'%'} } }, plugins:{ legend:{display:true}, tooltip:{mode:'index', intersect:false} } });
+    });
   }
 
   function aggregateByMonth(rows){ var map=new Map(); rows.forEach(function(r){ var ym=normYm(r[COL.ym]); if(!ym) return; var price=parsePrice(r[COL.price]); if(!isFinite(price)) return; var s=map.get(ym)||{sum:0,min:Infinity,max:-Infinity,count:0}; s.sum+=price; s.min=Math.min(s.min,price); s.max=Math.max(s.max,price); s.count++; map.set(ym,s); }); var items=Array.from(map.entries()).map(function(ent){ var ym=ent[0], s=ent[1]; return {ym:ym, avg:s.sum/s.count, min:s.min, max:s.max, count:s.count}; }).sort(function(a,b){ return a.ym.localeCompare(b.ym); }); for(var i=0;i<items.length;i++){ var prev=items[i-1]; items[i].mom = prev? ((items[i].avg-prev.avg)/prev.avg*100) : null; } return items; }
@@ -293,21 +290,107 @@
   function updateFilteredDownload(){ var rows=getFilteredRows(); if(!rows.length){ el.download.style.display='none'; return; } var csv=toCSV(rows); var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}); var url=URL.createObjectURL(blob); el.download.href=url; el.download.style.display='inline-flex'; }
   function setTitle(){ var a=currentApt?currentApt:'거래 내역'; var b=currentArea?(currentArea.toFixed(1)+' m² ('+(currentArea*0.3025).toFixed(1)+'평)'):''; el.title.textContent=currentArea? (a+' · '+b) : a; el.sub.textContent = (!currentApt? '아파트와 면적을 선택하세요' : (currentArea? '월별 평균가/증감률' : '면적을 선택하세요')); if(currentApt && currentArea){ draw(); } else { el.tbl.innerHTML=''; if(chart) chart.destroy(); } }
 
-  // ---------- 인사이트: 아파트별 기간 최저~최고 증감률 상위 ----------
-  function computeInsights(){
-    try{
-      var aptMap=new Map(); // apt -> Map(ym->{sum,count})
-      RAW.forEach(function(r){ var apt=(r[COL.apt]||'').trim(); if(!apt) return; var ym=normYm(r[COL.ym]); if(!ym) return; var price=parsePrice(r[COL.price]); if(!isFinite(price)) return; var m=aptMap.get(apt); if(!m){ m=new Map(); aptMap.set(apt,m);} var s=m.get(ym)||{sum:0,count:0}; s.sum+=price; s.count++; m.set(ym,s); });
-      var seriesByApt=new Map(); aptMap.forEach(function(monthMap,apt){ var arr=Array.from(monthMap.entries()).map(function(ent){return {ym:ent[0], avg:ent[1].sum/ent[1].count};}).sort(function(a,b){return a.ym.localeCompare(b.ym);}); seriesByApt.set(apt,arr); });
-      var allYms=[]; aptMap.forEach(function(m){ m.forEach(function(_,ym){ allYms.push(ym); }); }); if(!allYms.length) return; allYms.sort(); var lastYm=allYms[allYms.length-1];
-      var r15=maxGrowth(seriesByApt,'2015-01',lastYm); var r19=maxGrowth(seriesByApt,'2019-01','2023-12'); var r24=maxGrowth(seriesByApt,'2024-01',lastYm);
-      renderInsights('insight15',r15); renderInsights('insight19',r19); renderInsights('insight24',r24);
-    }catch(e){ console.error(e); }
+  /* ---------------- 전역 인사이트(아파트명+면적 그룹) ---------------- */
+  function determineYmBounds(){
+    var yms=[]; RAW.forEach(function(r){ var ym=normYm(r[COL.ym]); if(ym) yms.push(ym); });
+    yms.sort(); if(yms.length){ LAST_YM=yms[yms.length-1]; }
   }
-  function maxGrowth(seriesByApt,startYm,endYm){ var best=null; seriesByApt.forEach(function(arr,apt){ var seg=arr.filter(function(p){ return p.ym>=startYm && p.ym<=endYm; }); if(seg.length<2) return; var minV=Infinity,maxV=-Infinity,minYm='',maxYm=''; seg.forEach(function(p){ if(p.avg<minV){minV=p.avg;minYm=p.ym;} if(p.avg>maxV){maxV=p.avg;maxYm=p.ym;} }); if(!isFinite(minV)||!isFinite(maxV)||minV<=0) return; var pct=(maxV-minV)/minV*100; if(!best||pct>best.pct){ best={apt:apt,pct:pct,min:minV,max:maxV,minYm:minYm,maxYm:maxYm}; } }); return best; }
-  function renderInsights(id,r){ var box=qs('#'+id); if(!box) return; if(!r){ box.innerHTML='<span class="hint">데이터 없음</span>'; return;} box.innerHTML='<div style="font-weight:600">'+esc(r.apt)+'</div>'+'<div class="hint">최저 '+fmt(r.min/10000)+' 만원 ('+r.minYm+') → 최고 '+fmt(r.max/10000)+' 만원 ('+r.maxYm+')</div>'+'<div style="margin-top:6px;font-size:22px;font-weight:800">'+r.pct.toFixed(1)+'%</div>'; }
+  function groupKey(apt, area){ return apt+'|'+roundArea(area).toFixed(1); }
+  function groupLabel(apt, area){ var py = roundArea(area)*0.3025; return esc(apt)+' · '+roundArea(area).toFixed(1)+' m² ('+py.toFixed(1)+'평)'; }
+  function computeGlobalInsights(){
+    if(!COL.apt || !COL.area || !COL.ym || !COL.price){
+      renderGlobalCards([],[],[],[]);
+      return;
+    }
+    var mapCount = new Map(); // key -> 전체 거래건수
+    var mapMax   = new Map(); // key -> 전체 최고 실거래가
+    var tempMonth = new Map(); // key -> Map(ym -> {sum,count})
 
-  // ---------- 유틸 ----------
+    RAW.forEach(function(r){
+      var apt=(r[COL.apt]||'').trim(); if(!apt) return;
+      var area=parseArea(r[COL.area]); if(!isFinite(area)) return;
+      var key = groupKey(apt, area);
+      var ym=normYm(r[COL.ym]); if(!ym) return;
+      var price=parsePrice(r[COL.price]); if(!isFinite(price)) return;
+
+      mapCount.set(key, 1+(mapCount.get(key)||0));
+      var prevMax = mapMax.get(key); mapMax.set(key, Math.max(prevMax==null? -Infinity : prevMax, price));
+
+      var m = tempMonth.get(key); if(!m){ m=new Map(); tempMonth.set(key,m); }
+      var s = m.get(ym) || {sum:0,count:0}; s.sum+=price; s.count++; m.set(ym,s);
+    });
+
+    // key별 월평균 시계열 만들기
+    var series = new Map();
+    tempMonth.forEach(function(m, key){
+      var arr = Array.from(m.entries()).map(function(ent){
+        var ym=ent[0], s=ent[1];
+        return { ym:ym, avg:s.sum/s.count, count:s.count };
+      }).sort(function(a,b){ return a.ym.localeCompare(b.ym); });
+      series.set(key, arr);
+    });
+
+    // 거래량 Top3
+    var volTop = Array.from(mapCount.entries()).map(function(ent){ return { key:ent[0], count:ent[1] }; }).sort(function(a,b){ return b.count-a.count; }).slice(0,3);
+    // 최고가 Top3
+    var highTop = Array.from(mapMax.entries()).map(function(ent){ return { key:ent[0], max:ent[1] }; }).sort(function(a,b){ return b.max-a.max; }).slice(0,3);
+    // 증가율 Top3 (월평균 기준, 기간별)
+    var g15 = growthRank(series, '2015-01', LAST_YM||'2099-12').slice(0,3);
+    var g14 = growthRank(series, '2014-01', LAST_YM||'2099-12').slice(0,3);
+
+    renderGlobalCards(volTop, highTop, g15, g14);
+  }
+  function growthRank(seriesMap, startYm, endYm){
+    var out=[];
+    seriesMap.forEach(function(arr, key){
+      var seg = arr.filter(function(p){ return p.ym>=startYm && p.ym<=endYm; });
+      if(seg.length<2) return;
+      var minV=Infinity,maxV=-Infinity,minYm='',maxYm='';
+      for(var i=0;i<seg.length;i++){
+        var p=seg[i];
+        if(p.avg<minV){minV=p.avg;minYm=p.ym;}
+        if(p.avg>maxV){maxV=p.avg;maxYm=p.ym;}
+      }
+      if(!isFinite(minV)||!isFinite(maxV)||minV<=0) return;
+      var pct=(maxV-minV)/minV*100;
+      out.push({ key:key, pct:pct, min:minV, max:maxV, minYm:minYm, maxYm:maxYm });
+    });
+    out.sort(function(a,b){ return b.pct-a.pct; });
+    return out;
+  }
+  function renderGlobalCards(volTop, highTop, g15, g14){
+    var volBox = qs('#cardVol'); var highBox=qs('#cardHigh'); var g15Box=qs('#cardG15'); var g14Box=qs('#cardG14');
+    if(volBox){ volBox.innerHTML = renderList(volTop, function(r){
+      var parts=r.key.split('|'); var apt=parts[0]; var area=parseFloat(parts[1]);
+      return '<div style="display:flex;justify-content:space-between"><span>'+groupLabel(apt,area)+'</span><span class="hint">'+r.count.toLocaleString()+'건</span></div>';
+    }); }
+    if(highBox){ highBox.innerHTML = renderList(highTop, function(r){
+      var parts=r.key.split('|'); var apt=parts[0]; var area=parseFloat(parts[1]);
+      return '<div style="display:flex;justify-content:space-between"><span>'+groupLabel(apt,area)+'</span><span class="hint">'+fmt(r.max/10000)+' 만원</span></div>';
+    }); }
+    if(g15Box){ g15Box.innerHTML = renderList(g15, function(r){
+      var parts=r.key.split('|'); var apt=parts[0]; var area=parseFloat(parts[1]);
+      return '<div style="display:flex;justify-content:space-between"><span>'+groupLabel(apt,area)+'</span><span class="hint">'+r.pct.toFixed(1)+'%</span></div>' +
+             '<div class="hint">최저 '+fmt(r.min/10000)+' ('+r.minYm+') → 최고 '+fmt(r.max/10000)+' ('+r.maxYm+')</div>';
+    }); }
+    if(g14Box){ g14Box.innerHTML = renderList(g14, function(r){
+      var parts=r.key.split('|'); var apt=parts[0]; var area=parseFloat(parts[1]);
+      return '<div style="display:flex;justify-content:space-between"><span>'+groupLabel(apt,area)+'</span><span class="hint">'+r.pct.toFixed(1)+'%</span></div>' +
+             '<div class="hint">최저 '+fmt(r.min/10000)+' ('+r.minYm+') → 최고 '+fmt(r.max/10000)+' ('+r.maxYm+')</div>';
+    }); }
+  }
+  function renderList(arr, rowRender){
+    if(!arr||!arr.length) return '<div class="hint">데이터 없음</div>';
+    var html='';
+    for(var i=0;i<arr.length;i++){
+      html += '<div style="padding:6px 0;border-bottom:1px dashed #1f2937">' +
+              '<div class="hint">#'+(i+1)+'</div>' + rowRender(arr[i]) +
+              '</div>';
+    }
+    return html;
+  }
+
+  /* ---------------- 유틸 ---------------- */
   function setFixedChartHeight(){ el.canvas.style.height='300px'; el.canvas.style.maxHeight='300px'; }
   function norm(s){ return String(s).toLowerCase().replace(/\s+/g,''); }
   function qs(s,sc){ return (sc||document).querySelector(s); }
