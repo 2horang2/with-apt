@@ -244,7 +244,47 @@
     var y1Stats = momVals.length? rangeStats(momVals) : {min:-20,max:20};
     var y1Pad=(y1Stats.max-y1Stats.min)*0.10, y1MinMax=niceBounds(y1Stats.min-y1Pad, y1Stats.max+y1Pad);
     if(chart){ chart.destroy(); }
-    chart = new Chart(el.canvas.getContext('2d'),{ type:'line', data:{ labels:labels, datasets:[ {label:'평균가(만원)', data:avg, tension:0.25, yAxisID:'y'}, {label:'전월대비%', data:mom, type:'bar', yAxisID:'y1'} ] }, options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{position:'left', min:yMinMax[0], max:yMinMax[1], title:{display:true,text:'만원'}, ticks:{ callback:function(v){ return Number(v).toLocaleString(); } } }, y1:{position:'right', min:y1MinMax[0], max:y1MinMax[1], grid:{drawOnChartArea:false}, title:{display:true,text:'%'} } }, plugins:{ legend:{display:true}, tooltip:{mode:'index', intersect:false} } });
+    const ctx = document.getElementById('myChart').getContext('2d');
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          { label: '평균가(만원)', data: avg, tension: 0.25, yAxisID: 'y' },
+          { label: '전월대비%', data: mom, type: 'bar', yAxisID: 'y1' }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            position: 'left',
+            min: yMinMax[0],
+            max: yMinMax[1],
+            title: { display: true, text: '만원' },
+            ticks: {
+              callback: function(v) {
+                return Number(v).toLocaleString();
+              }
+            }
+          },
+          y1: {
+            position: 'right',
+            min: y1MinMax[0],
+            max: y1MinMax[1],
+            grid: { drawOnChartArea: false },
+            title: { display: true, text: '%' }
+          }
+        },
+        plugins: {
+          legend: { display: true },
+          tooltip: { mode: 'index', intersect: false }
+        }
+      }
+    });   
+    
+   // chart = new Chart(el.canvas.getContext('2d'),{ type:'line', data:{ labels:labels, datasets:[ {label:'평균가(만원)', data:avg, tension:0.25, yAxisID:'y'}, {label:'전월대비%', data:mom, type:'bar', yAxisID:'y1'} ] }, options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{position:'left', min:yMinMax[0], max:yMinMax[1], title:{display:true,text:'만원'}, ticks:{ callback:function(v){ return Number(v).toLocaleString(); } } }, y1:{position:'right', min:y1MinMax[0], max:y1MinMax[1], grid:{drawOnChartArea:false}, title:{display:true,text:'%'} } }, plugins:{ legend:{display:true}, tooltip:{mode:'index', intersect:false} } });
   }
 
   function aggregateByMonth(rows){ var map=new Map(); rows.forEach(function(r){ var ym=normYm(r[COL.ym]); if(!ym) return; var price=parsePrice(r[COL.price]); if(!isFinite(price)) return; var s=map.get(ym)||{sum:0,min:Infinity,max:-Infinity,count:0}; s.sum+=price; s.min=Math.min(s.min,price); s.max=Math.max(s.max,price); s.count++; map.set(ym,s); }); var items=Array.from(map.entries()).map(function(ent){ var ym=ent[0], s=ent[1]; return {ym:ym, avg:s.sum/s.count, min:s.min, max:s.max, count:s.count}; }).sort(function(a,b){ return a.ym.localeCompare(b.ym); }); for(var i=0;i<items.length;i++){ var prev=items[i-1]; items[i].mom = prev? ((items[i].avg-prev.avg)/prev.avg*100) : null; } return items; }
@@ -277,7 +317,7 @@
       var map = {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"};
       return map[m] || m;
     });
-  }[m]; }); }
+  }
   function parseArea(v){ if(v==null) return NaN; var n=+String(v).replace(/[^0-9.]/g,''); return isFinite(n)? n : NaN; }
   function roundArea(a){ return Math.round(a*10)/10; }
   function sameArea(a,b){ if(!isFinite(a)||!isFinite(b)) return false; return roundArea(a)===roundArea(b); }
